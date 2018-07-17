@@ -1,75 +1,101 @@
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
-def get_mnist_data():
-    df = pd.read_csv('train.csv')
-    X = df.drop('label', axis=1)
-    Y = df['label']
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
-    return X_train.values, Y_train.values, X_test.values, Y_test.values
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+
+def get_data():
+    df = pd.read_csv('data/train.csv')
+    x = df.drop('label', axis=1)
+    y = df['label']
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+    return x_train.values, y_train.values, x_test.values, y_test.values
 
 
 def initialize_weights_and_bias(dim, output_classes_count):
-    W = np.random.rand(dim, output_classes_count) * 0.01
+    w = np.random.rand(dim, output_classes_count) * 0.01
     b = np.zeros((1, output_classes_count))
-    return W,b
+    return w, b
 
 
-def calculate_gradients(probs, n, Y):
-    probs[range(n), Y] -= 1
+def calculate_gradients(probs, x, y, n, w, lamda):
+    probs[range(n), y] -= 1
     probs /= n
-    dW = np.dot(X_train.T, probs)
+    dw = np.dot(x.T, probs)
+    dw += lamda * w
     db = np.sum(probs, axis=0, keepdims=True)
-    return dW, db
+    return dw, db
 
 
-def optimize(X_train, Y_train, W, b, alpha=0.01, iter_count=2000):
-    for i in range(iter_count):
-        Z = np.dot(X_train, W) + b
-        exp_z = np.exp(Z)
+def calculate_accuracy(x, y, w, b):
+    scores = np.dot(x, w) + b
+    predicted_class = np.argmax(scores, axis=1)
+    return np.mean(predicted_class == y) * 100
+
+
+def predict(x, w, b):
+    z = np.dot(x, w) + b
+    return np.argmax(z, axis=1)
+
+
+def forward_prop(x, w, b):
+    return sigmoid(np.dot(x, w) + b)
+
+
+def model(x, y, alpha=0.1, lamda=1e-3, iteration_count=2000):
+    n = x.shape[0]
+    w, b = initialize_weights_and_bias(x.shape[1], 10)
+
+    for i in range(iteration_count):
+        z = np.dot(x, w) + b
+        exp_z = np.exp(z)
         probs = exp_z / np.sum(exp_z, axis=1, keepdims=True)
-        log_probs = -np.log(probs[range(n), Y_train])
+        log_probs = -np.log(probs[range(n), y])
+
         loss = (1 / n) * np.sum(log_probs)
+        regularization_loss = 0.5 * lamda * np.sum(w * w)
+        loss += regularization_loss
 
         if i % 100 == 0:
-            print("iteration %d: loss %f" % (i, loss))
+             print("iteration %d: loss %f" % (i, loss))
 
-        dW, db = calculate_gradients(probs, n, Y_train)
-        W += -alpha * dW
+        dw, db = calculate_gradients(probs, x, y, n, w, lamda)
+        w += -alpha * dw
         b += -alpha * db
 
-
-def calculate_accuracy(X_test, Y_test, W, b):
-    scores = np.dot(X_test, W) + b
-    predicted_class = np.argmax(scores, axis=1)
-    print('training accuracy: %.2f' % (np.mean(predicted_class == Y_test) * 100))
+    return w, b
 
 
-def predict(X, W, b, n):
-    Z = np.dot(X, W) + b
-    predictions = np.argmax(Z, axis=1)
-    indexes = list(range(1, n+1))
+def predict_test_data(w, b):
+    x = pd.read_csv('data/test.csv')
+    n = x.values.shape[0]
+    predictions = predict(x.values, w, b)
+    indexes = list(range(1, n + 1))
     csv = np.column_stack((np.array(indexes), predictions))
-    np.savetxt('pred.csv', csv, fmt='%d', delimiter=',', header="ImageId,Label")
+    np.savetxt('prediction.csv', csv, fmt='%d', delimiter=',', header="ImageId,Label")
 
 
-X_train, Y_train, X_test, Y_test = get_mnist_data()
-X_train = X_train/255
-X_test = X_test/255
-W, b = initialize_weights_and_bias(X_train.shape[1], 10)
-alpha = 0.05
-n = X_train.shape[0]
+def run():
+    x_train, y_train, x_val, y_val = get_data()
+    x_train = x_train/255.0
+    x_val = x_val/255.0
 
-optimize(X_train, Y_train, W, b, alpha)
-calculate_accuracy(X_test, Y_test, W, b)
+    w, b = model(x_train, y_train)
 
-X = pd.read_csv('test.csv')
-predict(X.values, W, b, X.values.shape[0])
+    accu_tr = calculate_accuracy(x_train, y_train, w, b)
+    print('training  set accuracy: %.2f' % accu_tr)
+
+    accu_val = calculate_accuracy(x_val, y_val, w, b)
+    print('validation set accuracy: %.2f' % accu_val)
+
+    predict_test_data(w, b)
 
 
 
-
-
+if __name__ == "__main__":
+    run()
 
