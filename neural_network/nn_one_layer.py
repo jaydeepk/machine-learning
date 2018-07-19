@@ -24,13 +24,9 @@ def get_data(one_hot_encoding=True):
 def build_neural_network(one_hot_encoding):
     network = models.Sequential()
     network.add(layers.Dense(512, activation='relu', input_shape=(28*28,)))
-    if one_hot_encoding is True:
-        network.add(layers.Dense(10, activation='softmax'))
-        network.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
-    else:
-        network.add(layers.Dense(1, activation='softmax'))
-        network.compile(optimizer='rmsprop', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
+    network.add(layers.Dense(10, activation='softmax'))
+    loss_function = 'categorical_crossentropy' if one_hot_encoding else 'sparse_categorical_crossentropy'
+    network.compile(optimizer='rmsprop', loss=loss_function, metrics=['accuracy'])
     return network
 
 
