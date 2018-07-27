@@ -4,36 +4,45 @@ from keras.utils import to_categorical
 from keras import layers
 from keras import models
 
-(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
 
-train_images = train_images.reshape((60000, 28, 28, 1))
-train_images = train_images.astype('float32')/255
+def get_mnist_data():
+    (train_images, train_labels), (test_images, test_labels) =  mnist.load_data()
 
-test_images = test_images.reshape((10000, 28, 28, 1))
-test_images = test_images.astype('float32')/255
+    train_images = train_images.reshape((60000, 28, 28, 1))
+    train_images = train_images.astype('float32')/255
 
-train_labels = to_categorical(train_labels)
-test_labels = to_categorical(test_labels)
+    test_images = test_images.reshape((10000, 28, 28, 1))
+    test_images = test_images.astype('float32')/255
 
-model = models.Sequential()
+    train_labels = to_categorical(train_labels)
+    test_labels = to_categorical(test_labels)
 
-model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)))
-model.add(layers.MaxPool2D((2, 2)))
-
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.MaxPool2D((2, 2)))
-
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.Flatten())
-
-model.add(layers.Dense(64, activation='relu'))
-model.add(layers.Dense(10, activation='softmax'))
+    return train_images, train_labels, test_images, test_labels
 
 
-model.compile(optimizer='rmsprop',
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
+def build_convent_model():
+    model = models.Sequential()
+    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)))
+    model.add(layers.MaxPool2D((2, 2)))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+    model.add(layers.MaxPool2D((2, 2)))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dense(10, activation='softmax'))
+    return model
 
-model.summary()
-model.fit(train_images, train_labels, epochs=5, batch_size=64)
+
+def run():
+    train_images, train_labels, test_images, test_labels = get_mnist_data()
+    model = build_convent_model()
+    model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
+    model.fit(train_images, train_labels, epochs=5, batch_size=64)
+    test_loss, test_acc = model.evaluate(test_images, test_labels)
+    print('test accuracy:', test_acc)
+
+
+if __name__ == "__main__":
+    run()
+
 
